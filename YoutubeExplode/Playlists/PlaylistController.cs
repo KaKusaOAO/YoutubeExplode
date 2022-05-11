@@ -30,8 +30,8 @@ internal class PlaylistController : YoutubeControllerBase
                 {
                     clientName = "WEB",
                     clientVersion = "2.20210408.08.00",
-                    hl = "en",
-                    gl = "US",
+                    hl = "zh",
+                    gl = "TW",
                     utcOffsetMinutes = 0
                 }
             }
@@ -73,8 +73,8 @@ internal class PlaylistController : YoutubeControllerBase
                 {
                     clientName = "WEB",
                     clientVersion = "2.20210408.08.00",
-                    hl = "en",
-                    gl = "US",
+                    hl = "zh",
+                    gl = "TW",
                     utcOffsetMinutes = 0,
                     visitorData
                 }

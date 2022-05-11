@@ -18,7 +18,7 @@ internal class VideoController : YoutubeControllerBase
         VideoId videoId,
         CancellationToken cancellationToken = default)
     {
-        var url = $"https://www.youtube.com/watch?v={videoId}&bpctr=9999999999&hl=en";
+        var url = $"https://www.youtube.com/watch?v={videoId}&bpctr=9999999999&hl=zh-TW";
 
         for (var retry = 0; retry <= 5; retry++)
         {
@@ -61,8 +61,8 @@ internal class VideoController : YoutubeControllerBase
                     clientName = "ANDROID",
                     clientScreen = isEmbedded ? "EMBED" : null,
                     clientVersion = "16.46.37",
-                    hl = "en",
-                    gl = "US",
+                    hl = "zh",
+                    gl = "TW",
                     utcOffsetMinutes = 0
                 },
                 thirdParty = new
