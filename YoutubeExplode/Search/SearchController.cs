@@ -39,7 +39,7 @@ internal class SearchController : YoutubeControllerBase
                     clientName = "WEB",
                     clientVersion = "2.20210408.08.00",
                     hl = "zh",
-                    gl = "TW",
+                    gl = "Hant",
                     utcOffsetMinutes = 0
                 }
             }

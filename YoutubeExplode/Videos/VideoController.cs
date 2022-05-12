@@ -62,7 +62,7 @@ internal class VideoController : YoutubeControllerBase
                     clientScreen = isEmbedded ? "EMBED" : null,
                     clientVersion = "16.46.37",
                     hl = "zh",
-                    gl = "TW",
+                    gl = "Hant",
                     utcOffsetMinutes = 0
                 },
                 thirdParty = new
