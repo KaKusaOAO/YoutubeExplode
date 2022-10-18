@@ -230,9 +230,7 @@ public class StreamClient
         if (!streamInfos.Any())
         {
             var reason = playerResponse.TryGetVideoPlayabilityError();
-            throw new VideoUnplayableException(
-                $"Video '{videoId}' does not contain any playable streams. Reason: '{reason}'."
-            );
+            throw new VideoUnplayableException(videoId, reason, VideoUnplayableException.ReasonType.NoStream);
         }
 
         return new StreamManifest(streamInfos);
@@ -249,7 +247,7 @@ public class StreamClient
         if (!playerResponse.IsVideoPlayable())
         {
             var reason = playerResponse.TryGetVideoPlayabilityError();
-            throw new VideoUnplayableException($"Video '{videoId}' is unplayable. Reason: '{reason}'.");
+            throw new VideoUnplayableException(videoId, reason, VideoUnplayableException.ReasonType.Generic);
         }
 
         var hlsUrl = playerResponse.TryGetHlsManifestUrl();
