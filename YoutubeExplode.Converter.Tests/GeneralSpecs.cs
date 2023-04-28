@@ -1,119 +1,206 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Gress;
 using Xunit;
 using Xunit.Abstractions;
-using YoutubeExplode.Converter.Tests.Fixtures;
 using YoutubeExplode.Converter.Tests.Utils;
+using YoutubeExplode.Videos.Streams;
 
 namespace YoutubeExplode.Converter.Tests;
 
-public class GeneralSpecs : IClassFixture<TempOutputFixture>, IClassFixture<FFmpegFixture>
+public class GeneralSpecs : IAsyncLifetime
 {
     private readonly ITestOutputHelper _testOutput;
-    private readonly TempOutputFixture _tempOutputFixture;
-    private readonly FFmpegFixture _ffmpegFixture;
 
-    public GeneralSpecs(
-        ITestOutputHelper testOutput,
-        TempOutputFixture tempOutputFixture,
-        FFmpegFixture ffmpegFixture)
-    {
+    public GeneralSpecs(ITestOutputHelper testOutput) =>
         _testOutput = testOutput;
-        _tempOutputFixture = tempOutputFixture;
-        _ffmpegFixture = ffmpegFixture;
-    }
+
+    public async Task InitializeAsync() => await FFmpeg.InitializeAsync();
+
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
-    public async Task User_can_download_a_video_by_merging_best_streams_into_a_single_mp4_file()
+    public async Task I_can_download_a_video_as_a_single_mp4_file()
     {
         // Arrange
         var youtube = new YoutubeClient();
-        var outputFilePath = Path.ChangeExtension(_tempOutputFixture.GetTempFilePath(), "mp4");
+
+        using var dir = TempDir.Create();
+        var filePath = Path.Combine(dir.Path, "video.mp4");
 
         // Act
-        await youtube.Videos.DownloadAsync("AI7ULzgf8RU", outputFilePath);
+        await youtube.Videos.DownloadAsync("9bZkp7q19f0", filePath);
 
         // Assert
-        MediaFormat.IsMp4File(outputFilePath).Should().BeTrue();
+        MediaFormat.IsMp4File(filePath).Should().BeTrue();
     }
 
     [Fact]
-    public async Task User_can_download_a_video_by_merging_best_streams_into_a_single_webm_file()
+    public async Task I_can_download_a_video_as_a_single_webm_file()
     {
         // Arrange
         var youtube = new YoutubeClient();
-        var outputFilePath = Path.ChangeExtension(_tempOutputFixture.GetTempFilePath(), "webm");
+
+        using var dir = TempDir.Create();
+        var filePath = Path.Combine(dir.Path, "video.webm");
 
         // Act
-        await youtube.Videos.DownloadAsync("5NmxuoNyDss", outputFilePath);
+        await youtube.Videos.DownloadAsync("9bZkp7q19f0", filePath);
 
         // Assert
-        MediaFormat.IsWebMFile(outputFilePath).Should().BeTrue();
+        MediaFormat.IsWebMFile(filePath).Should().BeTrue();
     }
 
     [Fact]
-    public async Task User_can_download_a_video_by_merging_best_streams_into_a_single_mp3_file()
+    public async Task I_can_download_a_video_as_a_single_mp3_file()
     {
         // Arrange
         var youtube = new YoutubeClient();
-        var outputFilePath = Path.ChangeExtension(_tempOutputFixture.GetTempFilePath(), "mp3");
+
+        using var dir = TempDir.Create();
+        var filePath = Path.Combine(dir.Path, "video.mp3");
 
         // Act
-        await youtube.Videos.DownloadAsync("AI7ULzgf8RU", outputFilePath);
+        await youtube.Videos.DownloadAsync("9bZkp7q19f0", filePath);
 
         // Assert
-        MediaFormat.IsMp3File(outputFilePath).Should().BeTrue();
+        MediaFormat.IsMp3File(filePath).Should().BeTrue();
     }
 
     [Fact]
-    public async Task User_can_download_a_video_by_merging_best_streams_into_a_single_ogg_file()
+    public async Task I_can_download_a_video_as_a_single_ogg_file()
     {
         // Arrange
         var youtube = new YoutubeClient();
-        var outputFilePath = Path.ChangeExtension(_tempOutputFixture.GetTempFilePath(), "ogg");
+
+        using var dir = TempDir.Create();
+        var filePath = Path.Combine(dir.Path, "video.ogg");
 
         // Act
-        await youtube.Videos.DownloadAsync("AI7ULzgf8RU", outputFilePath);
+        await youtube.Videos.DownloadAsync("9bZkp7q19f0", filePath);
 
         // Assert
-        MediaFormat.IsOggFile(outputFilePath).Should().BeTrue();
+        MediaFormat.IsOggFile(filePath).Should().BeTrue();
     }
 
     [Fact]
-    public async Task User_can_download_a_video_with_custom_conversion_settings()
+    public async Task I_can_download_a_video_as_a_single_mp4_file_with_multiple_streams()
     {
         // Arrange
         var youtube = new YoutubeClient();
-        var outputFilePath = _tempOutputFixture.GetTempFilePath();
+
+        using var dir = TempDir.Create();
+        var filePath = Path.Combine(dir.Path, "video.mp4");
 
         // Act
-        await youtube.Videos.DownloadAsync("AI7ULzgf8RU", outputFilePath, o => o
-            .SetFFmpegPath(_ffmpegFixture.FilePath)
+        var manifest = await youtube.Videos.Streams.GetManifestAsync("9bZkp7q19f0");
+
+        var audioStreamInfos = manifest
+            .GetAudioOnlyStreams()
+            .Where(s => s.Container == Container.Mp4)
+            .OrderBy(s => s.Bitrate)
+            .Take(3)
+            .ToArray();
+
+        var videoStreamInfos = manifest
+            .GetVideoOnlyStreams()
+            .Where(s => s.Container == Container.Mp4)
+            .OrderBy(s => s.VideoQuality)
+            .DistinctBy(s => s.VideoQuality.Label, StringComparer.OrdinalIgnoreCase)
+            .Take(3)
+            .ToArray();
+
+        await youtube.Videos.DownloadAsync(
+            videoStreamInfos.Concat<IStreamInfo>(audioStreamInfos).ToArray(),
+            new ConversionRequestBuilder(filePath).Build()
+        );
+
+        // Assert
+        MediaFormat.IsMp4File(filePath).Should().BeTrue();
+
+        foreach (var streamInfo in videoStreamInfos)
+            FileEx.ContainsBytes(filePath, Encoding.ASCII.GetBytes(streamInfo.VideoQuality.Label)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task I_can_download_a_video_as_a_single_webm_file_with_multiple_streams()
+    {
+        // Arrange
+        var youtube = new YoutubeClient();
+
+        using var dir = TempDir.Create();
+        var filePath = Path.Combine(dir.Path, "video.webm");
+
+        // Act
+        var manifest = await youtube.Videos.Streams.GetManifestAsync("9bZkp7q19f0");
+
+        var audioStreamInfos = manifest
+            .GetAudioOnlyStreams()
+            .Where(s => s.Container == Container.WebM)
+            .OrderBy(s => s.Bitrate)
+            .Take(3)
+            .ToArray();
+
+        var videoStreamInfos = manifest
+            .GetVideoOnlyStreams()
+            .Where(s => s.Container == Container.WebM)
+            .OrderBy(s => s.VideoQuality)
+            .DistinctBy(s => s.VideoQuality.Label, StringComparer.OrdinalIgnoreCase)
+            .Take(3)
+            .ToArray();
+
+        await youtube.Videos.DownloadAsync(
+            videoStreamInfos.Concat<IStreamInfo>(audioStreamInfos).ToArray(),
+            new ConversionRequestBuilder(filePath).Build()
+        );
+
+        // Assert
+        MediaFormat.IsWebMFile(filePath).Should().BeTrue();
+
+        foreach (var streamInfo in videoStreamInfos)
+            FileEx.ContainsBytes(filePath, Encoding.ASCII.GetBytes(streamInfo.VideoQuality.Label)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task I_can_download_a_video_using_custom_conversion_settings()
+    {
+        // Arrange
+        var youtube = new YoutubeClient();
+
+        using var dir = TempDir.Create();
+        var filePath = Path.Combine(dir.Path, "video.mp3");
+
+        // Act
+        await youtube.Videos.DownloadAsync("9bZkp7q19f0", filePath, o => o
+            .SetFFmpegPath(FFmpeg.FilePath)
             .SetContainer("mp4")
             .SetPreset(ConversionPreset.UltraFast)
         );
 
         // Assert
-        MediaFormat.IsMp4File(outputFilePath).Should().BeTrue();
+        MediaFormat.IsMp4File(filePath).Should().BeTrue();
     }
 
     [Fact]
-    public async Task User_can_download_a_video_and_track_the_progress_of_the_operation()
+    public async Task I_can_download_a_video_and_track_the_progress()
     {
         // Arrange
+        var youtube = new YoutubeClient();
+
+        using var dir = TempDir.Create();
+        var filePath = Path.Combine(dir.Path, "video.mp3");
+
         var progress = new ProgressCollector<double>();
 
-        var youtube = new YoutubeClient();
-        var outputFilePath = _tempOutputFixture.GetTempFilePath();
-
         // Act
-        await youtube.Videos.DownloadAsync("AI7ULzgf8RU", outputFilePath, progress);
+        await youtube.Videos.DownloadAsync("9bZkp7q19f0", filePath, progress);
 
         // Assert
         var progressValues = progress.GetValues();
-
         progressValues.Should().NotBeEmpty();
 
         foreach (var value in progress.GetValues())

@@ -17,34 +17,38 @@ public class VideoSpecs
         _testOutput = testOutput;
 
     [Fact]
-    public async Task User_can_get_metadata_of_a_video()
+    public async Task I_can_get_metadata_of_a_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
 
         // Act
-        var video = await youtube.Videos.GetAsync(VideoIds.ContainsDashManifest);
+        var video = await youtube.Videos.GetAsync(VideoIds.Normal);
 
         // Assert
-        video.Id.Value.Should().Be(VideoIds.ContainsDashManifest);
+        video.Id.Value.Should().Be(VideoIds.Normal);
         video.Url.Should().NotBeNullOrWhiteSpace();
-        video.Title.Should().Be("Aka no Ha [Another] +HDHR");
-        video.Author.ChannelId.Value.Should().Be("UCEnBXANsKmyj2r9xVyKoDiQ");
+        video.Title.Should().Be("PSY - GANGNAM STYLE(강남스타일) M/V");
+        video.Author.ChannelId.Value.Should().Be("UCrDkAvwZum-UTjHmzDI2iIw");
         video.Author.ChannelUrl.Should().NotBeNullOrWhiteSpace();
-        video.Author.ChannelTitle.Should().Be("Tyrrrz");
-        video.UploadDate.Date.Should().Be(new DateTime(2017, 09, 30));
-        video.Description.Should().Contain("246pp");
-        video.Duration.Should().BeCloseTo(TimeSpan.FromSeconds(108), TimeSpan.FromSeconds(1));
+        video.Author.ChannelTitle.Should().Be("officialpsy");
+        video.UploadDate.Date.Should().Be(new DateTime(2012, 07, 15));
+        video.Description.Should().Contain("More about PSY@");
+        video.Duration.Should().BeCloseTo(TimeSpan.FromSeconds(252), TimeSpan.FromSeconds(1));
         video.Thumbnails.Should().NotBeEmpty();
-        video.Keywords.Should().BeEquivalentTo("osu", "mouse", "rhythm game");
-        video.Engagement.ViewCount.Should().BeGreaterOrEqualTo(134);
-        video.Engagement.LikeCount.Should().BeGreaterOrEqualTo(5);
+        video.Keywords.Should().BeEquivalentTo(
+            "PSY", "싸이", "강남스타일", "뮤직비디오",
+            "Music Video", "Gangnam Style", "KOREAN SINGER", "KPOP", "KOERAN WAVE",
+            "PSY 6甲", "6th Studio Album", "싸이6집", "육갑"
+        );
+        video.Engagement.ViewCount.Should().BeGreaterOrEqualTo(4_650_000_000);
+        video.Engagement.LikeCount.Should().BeGreaterOrEqualTo(24_000_000);
         video.Engagement.DislikeCount.Should().BeGreaterOrEqualTo(0);
         video.Engagement.AverageRating.Should().BeGreaterOrEqualTo(0);
     }
 
     [Fact]
-    public async Task User_cannot_get_metadata_of_a_private_video()
+    public async Task I_cannot_get_metadata_of_a_private_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
@@ -58,14 +62,14 @@ public class VideoSpecs
     }
 
     [Fact]
-    public async Task User_cannot_get_metadata_of_a_non_existing_video()
+    public async Task I_cannot_get_metadata_of_a_non_existing_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
 
         // Act & assert
         var ex = await Assert.ThrowsAsync<VideoUnavailableException>(async () =>
-            await youtube.Videos.GetAsync(VideoIds.NonExisting)
+            await youtube.Videos.GetAsync(VideoIds.Deleted)
         );
 
         _testOutput.WriteLine(ex.Message);
@@ -74,12 +78,12 @@ public class VideoSpecs
     [Theory]
     [InlineData(VideoIds.Normal)]
     [InlineData(VideoIds.Unlisted)]
-    [InlineData(VideoIds.EmbedRestrictedByAuthor)]
     [InlineData(VideoIds.EmbedRestrictedByYouTube)]
-    [InlineData(VideoIds.AgeRestricted)]
+    [InlineData(VideoIds.EmbedRestrictedByAuthor)]
+    [InlineData(VideoIds.AgeRestrictedViolent)]
     [InlineData(VideoIds.AgeRestrictedEmbedRestricted)]
-    [InlineData(VideoIds.RatingDisabled)]
-    public async Task User_can_get_metadata_of_any_available_video(string videoId)
+    [InlineData(VideoIds.WithBrokenTitle)]
+    public async Task I_can_get_metadata_of_any_available_video(string videoId)
     {
         // Arrange
         var youtube = new YoutubeClient();
@@ -90,7 +94,7 @@ public class VideoSpecs
         // Assert
         video.Id.Value.Should().Be(videoId);
         video.Url.Should().NotBeNullOrWhiteSpace();
-        video.Title.Should().NotBeNullOrWhiteSpace();
+        video.Title.Should().NotBeNull(); // empty titles are allowed
         video.Author.ChannelId.Value.Should().NotBeNullOrWhiteSpace();
         video.Author.ChannelUrl.Should().NotBeNullOrWhiteSpace();
         video.Author.ChannelTitle.Should().NotBeNullOrWhiteSpace();
@@ -101,7 +105,7 @@ public class VideoSpecs
     }
 
     [Fact]
-    public async Task User_can_get_the_highest_resolution_thumbnail_from_a_video()
+    public async Task I_can_get_the_highest_resolution_thumbnail_from_a_video()
     {
         // Arrange
         var youtube = new YoutubeClient();

@@ -5,31 +5,27 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using YoutubeExplode.Exceptions;
-using YoutubeExplode.Tests.Fixtures;
 using YoutubeExplode.Tests.TestData;
+using YoutubeExplode.Tests.Utils;
 using YoutubeExplode.Videos.Streams;
 
 namespace YoutubeExplode.Tests;
 
-public class StreamSpecs : IClassFixture<TempOutputFixture>
+public class StreamSpecs
 {
     private readonly ITestOutputHelper _testOutput;
-    private readonly TempOutputFixture _tempOutputFixture;
 
-    public StreamSpecs(ITestOutputHelper testOutput, TempOutputFixture tempOutputFixture)
-    {
+    public StreamSpecs(ITestOutputHelper testOutput) =>
         _testOutput = testOutput;
-        _tempOutputFixture = tempOutputFixture;
-    }
 
     [Fact]
-    public async Task User_can_get_the_list_of_available_streams_on_a_video()
+    public async Task I_can_get_the_list_of_available_streams_on_a_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
 
         // Act
-        var manifest = await youtube.Videos.Streams.GetManifestAsync(VideoIds.ContainsHighQualityStreams);
+        var manifest = await youtube.Videos.Streams.GetManifestAsync(VideoIds.WithHighQualityStreams);
 
         // Assert
         manifest.Streams.Should().NotBeEmpty();
@@ -63,16 +59,15 @@ public class StreamSpecs : IClassFixture<TempOutputFixture>
     [Theory]
     [InlineData(VideoIds.Normal)]
     [InlineData(VideoIds.Unlisted)]
-    [InlineData(VideoIds.LiveStreamRecording)]
-    [InlineData(VideoIds.ContainsDashManifest)]
-    [InlineData(VideoIds.Omnidirectional)]
-    [InlineData(VideoIds.HighDynamicRange)]
-    [InlineData(VideoIds.EmbedRestrictedByAuthor)]
     [InlineData(VideoIds.EmbedRestrictedByYouTube)]
-    [InlineData(VideoIds.AgeRestricted)]
-    [InlineData(VideoIds.AgeRestrictedSignature)]
+    [InlineData(VideoIds.EmbedRestrictedByAuthor)]
+    [InlineData(VideoIds.AgeRestrictedViolent)]
+    [InlineData(VideoIds.AgeRestrictedSexual)]
     [InlineData(VideoIds.AgeRestrictedEmbedRestricted)]
-    public async Task User_can_get_the_list_of_available_streams_on_any_playable_video(string videoId)
+    [InlineData(VideoIds.LiveStreamRecording)]
+    [InlineData(VideoIds.WithOmnidirectionalStreams)]
+    [InlineData(VideoIds.WithHighDynamicRangeStreams)]
+    public async Task I_can_get_the_list_of_available_streams_on_any_playable_video(string videoId)
     {
         // Arrange
         var youtube = new YoutubeClient();
@@ -85,7 +80,7 @@ public class StreamSpecs : IClassFixture<TempOutputFixture>
     }
 
     [Fact]
-    public async Task User_cannot_get_the_list_of_available_streams_on_a_paid_video()
+    public async Task I_cannot_get_the_list_of_available_streams_on_a_paid_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
@@ -101,7 +96,7 @@ public class StreamSpecs : IClassFixture<TempOutputFixture>
     }
 
     [Fact]
-    public async Task User_cannot_get_the_list_of_available_streams_on_a_private_video()
+    public async Task I_cannot_get_the_list_of_available_streams_on_a_private_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
@@ -115,14 +110,14 @@ public class StreamSpecs : IClassFixture<TempOutputFixture>
     }
 
     [Fact]
-    public async Task User_cannot_get_the_list_of_available_streams_on_a_non_existing_video()
+    public async Task I_cannot_get_the_list_of_available_streams_on_a_non_existing_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
 
         // Act & assert
         var ex = await Assert.ThrowsAsync<VideoUnavailableException>(async () =>
-            await youtube.Videos.Streams.GetManifestAsync(VideoIds.NonExisting)
+            await youtube.Videos.Streams.GetManifestAsync(VideoIds.Deleted)
         );
 
         _testOutput.WriteLine(ex.Message);
@@ -130,12 +125,11 @@ public class StreamSpecs : IClassFixture<TempOutputFixture>
 
     [Theory]
     [InlineData(VideoIds.Normal)]
-    [InlineData(VideoIds.AgeRestricted)]
-    [InlineData(VideoIds.AgeRestrictedSignature)]
+    [InlineData(VideoIds.AgeRestrictedViolent)]
+    [InlineData(VideoIds.AgeRestrictedSexual)]
     [InlineData(VideoIds.LiveStreamRecording)]
-    [InlineData(VideoIds.ContainsDashManifest)]
-    [InlineData(VideoIds.Omnidirectional)]
-    public async Task User_can_get_a_specific_stream_from_a_video(string videoId)
+    [InlineData(VideoIds.WithOmnidirectionalStreams)]
+    public async Task I_can_get_a_specific_stream_from_a_video(string videoId)
     {
         // Arrange
         var buffer = new byte[1024];
@@ -157,72 +151,71 @@ public class StreamSpecs : IClassFixture<TempOutputFixture>
     [Theory]
     [InlineData(VideoIds.Normal)]
     [InlineData(VideoIds.Unlisted)]
-    [InlineData(VideoIds.LiveStreamRecording)]
-    [InlineData(VideoIds.ContainsDashManifest)]
-    [InlineData(VideoIds.Omnidirectional)]
-    [InlineData(VideoIds.EmbedRestrictedByAuthor)]
     [InlineData(VideoIds.EmbedRestrictedByYouTube)]
-    [InlineData(VideoIds.AgeRestricted)]
-    [InlineData(VideoIds.AgeRestrictedSignature)]
+    [InlineData(VideoIds.EmbedRestrictedByAuthor)]
+    [InlineData(VideoIds.AgeRestrictedViolent)]
+    [InlineData(VideoIds.AgeRestrictedSexual)]
     [InlineData(VideoIds.AgeRestrictedEmbedRestricted)]
-    public async Task User_can_download_a_specific_stream_from_a_video(string videoId)
+    [InlineData(VideoIds.LiveStreamRecording)]
+    [InlineData(VideoIds.WithOmnidirectionalStreams)]
+    public async Task I_can_download_a_specific_stream_from_a_video(string videoId)
     {
         // Arrange
-        var filePath = _tempOutputFixture.GetTempFilePath();
+        using var file = TempFile.Create();
         var youtube = new YoutubeClient();
 
         // Act
         var manifest = await youtube.Videos.Streams.GetManifestAsync(videoId);
         var streamInfo = manifest.Streams.OrderBy(s => s.Size).First();
 
-        await youtube.Videos.Streams.DownloadAsync(streamInfo, filePath);
+        await youtube.Videos.Streams.DownloadAsync(streamInfo, file.Path);
 
         // Assert
-        var fileInfo = new FileInfo(filePath);
+        var fileInfo = new FileInfo(file.Path);
         fileInfo.Exists.Should().BeTrue();
         fileInfo.Length.Should().Be(streamInfo.Size.Bytes);
     }
 
     [Fact]
-    public async Task User_can_download_the_highest_bitrate_stream_from_a_video()
+    public async Task I_can_download_the_highest_bitrate_stream_from_a_video()
     {
         // Arrange
-        var filePath = _tempOutputFixture.GetTempFilePath();
+        using var file = TempFile.Create();
         var youtube = new YoutubeClient();
 
         // Act
-        var manifest = await youtube.Videos.Streams.GetManifestAsync(VideoIds.ContainsDashManifest);
+        var manifest = await youtube.Videos.Streams.GetManifestAsync(VideoIds.Normal);
         var streamInfo = manifest.Streams.GetWithHighestBitrate();
 
-        await youtube.Videos.Streams.DownloadAsync(streamInfo, filePath);
+        await youtube.Videos.Streams.DownloadAsync(streamInfo, file.Path);
 
         // Assert
-        var fileInfo = new FileInfo(filePath);
+        var fileInfo = new FileInfo(file.Path);
         fileInfo.Exists.Should().BeTrue();
         fileInfo.Length.Should().Be(streamInfo.Size.Bytes);
     }
 
     [Fact]
-    public async Task User_can_download_the_highest_quality_stream_from_a_video()
+    public async Task I_can_download_the_highest_quality_stream_from_a_video()
     {
         // Arrange
-        var filePath = _tempOutputFixture.GetTempFilePath();
+        using var file = TempFile.Create();
         var youtube = new YoutubeClient();
 
         // Act
-        var manifest = await youtube.Videos.Streams.GetManifestAsync(VideoIds.ContainsDashManifest);
+        var manifest = await youtube.Videos.Streams.GetManifestAsync(VideoIds.Normal);
         var streamInfo = manifest.GetVideoStreams().GetWithHighestVideoQuality();
 
-        await youtube.Videos.Streams.DownloadAsync(streamInfo, filePath);
+        await youtube.Videos.Streams.DownloadAsync(streamInfo, file.Path);
 
         // Assert
-        var fileInfo = new FileInfo(filePath);
+        var fileInfo = new FileInfo(file.Path);
         fileInfo.Exists.Should().BeTrue();
         fileInfo.Length.Should().Be(streamInfo.Size.Bytes);
     }
 
     [Fact]
-    public async Task User_can_seek_to_a_specific_position_on_a_stream_from_a_video()
+    public async Task I_can_seek_to_a_specific_position_on_a_stream_from_a_video()
     {
         // Arrange
         await using var buffer = new MemoryStream();
@@ -241,7 +234,7 @@ public class StreamSpecs : IClassFixture<TempOutputFixture>
     }
 
     [Fact]
-    public async Task User_can_get_HTTP_live_stream_URL_from_a_video()
+    public async Task I_can_get_HTTP_live_stream_URL_from_a_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
@@ -254,7 +247,7 @@ public class StreamSpecs : IClassFixture<TempOutputFixture>
     }
 
     [Fact]
-    public async Task User_cannot_get_HTTP_live_stream_URL_from_an_unplayable_video()
+    public async Task I_cannot_get_HTTP_live_stream_URL_from_an_unplayable_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
@@ -268,7 +261,7 @@ public class StreamSpecs : IClassFixture<TempOutputFixture>
     }
 
     [Fact]
-    public async Task User_cannot_get_HTTP_live_stream_URL_from_a_non_live_video()
+    public async Task I_cannot_get_HTTP_live_stream_URL_from_a_non_live_video()
     {
         // Arrange
         var youtube = new YoutubeClient();
