@@ -194,10 +194,8 @@ public class StreamClient
         // If the video is still unplayable, error out
         if (!playerResponse.IsPlayable)
         {
-            throw new VideoUnplayableException(
-                $"Video '{videoId}' is unplayable. " +
-                $"Reason: '{playerResponse.PlayabilityError}'."
-            );
+            throw new VideoUnplayableException(videoId, playerResponse.PlayabilityError, 
+                VideoUnplayableException.ReasonType.Generic);
         }
 
         // Extract streams from player response
@@ -230,9 +228,8 @@ public class StreamClient
 
             if (!streamInfos.Any())
             {
-                throw new VideoUnplayableException(
-                    $"Video '{videoId}' does not contain any playable streams."
-                );
+                throw new VideoUnplayableException(videoId, null, 
+                    VideoUnplayableException.ReasonType.NoStream);
             }
 
             // YouTube sometimes returns stream URLs that produce 403 Forbidden errors when accessed.
@@ -258,10 +255,8 @@ public class StreamClient
         var playerResponse = await _controller.GetPlayerResponseAsync(videoId, cancellationToken);
         if (!playerResponse.IsPlayable)
         {
-            throw new VideoUnplayableException(
-                $"Video '{videoId}' is unplayable. " +
-                $"Reason: '{playerResponse.PlayabilityError}'."
-            );
+            throw new VideoUnplayableException(videoId, playerResponse.PlayabilityError, 
+                VideoUnplayableException.ReasonType.Generic);
         }
 
         if (string.IsNullOrWhiteSpace(playerResponse.HlsManifestUrl))

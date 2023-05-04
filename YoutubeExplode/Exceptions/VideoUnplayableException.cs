@@ -14,6 +14,7 @@ public class VideoUnplayableException : YoutubeExplodeException
         NoStream
     }
     
+    // This overload is reserved for inheritors only
     /// <summary>
     /// Initializes an instance of <see cref="VideoUnplayableException" />.
     /// </summary>
